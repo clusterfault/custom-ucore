@@ -18,6 +18,12 @@ rpm-ostree install screen
 # this would install a package from rpmfusion
 # rpm-ostree install vlc
 
+# install homebrew
+/tmp/packages/brew/install.sh
+
 #### Example for enabling a System Unit File
 
 systemctl enable podman.socket
+
+# homebrew post-install tasks
+/tmp/packages/brew/post-install.sh
