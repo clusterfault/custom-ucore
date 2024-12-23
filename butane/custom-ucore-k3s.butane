@@ -1,0 +1,167 @@
+variant: fcos
+version: 1.4.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPq+6J0Ssd7bfPcwva85fTheS3I4l3kLP4r04J5ZkEic hsingh@confluent.io
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJPm8FHX5EtFK5BUZzlzdhI5A9nWHLVfCEY66djOJS5E harpreet@precision
+      password_hash: $y$j9T$2tAyrsoOrXrzVouTo6cJ5.$9oTIcJYHlNer9YmSlzVa/VNr6prkF9j6AA5g4KUpQj0
+storage:
+  directories:
+    - path: /etc/custom-ucore-autorebase
+      mode: 0754
+  files:
+    - path: /etc/yum.repos.d/kubernetes.repo
+      mode: 0644
+      contents:
+        inline: |
+          [kubernetes]
+          name=Kubernetes
+          baseurl=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/repodata/repomd.xml.key
+    - path: /etc/yum.repos.d/rancher-k3s-common.repo
+      mode: 0644
+      contents:
+        inline: |
+          [rancher-k3s-common-stable]
+          name=Rancher K3s Common (stable)
+          baseurl=https://rpm.rancher.io/k3s/stable/common/coreos/noarch
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=0
+          gpgkey=https://rpm.rancher.io/public.key
+    - path: /usr/local/bin/k3s
+      overwrite: true
+      mode: 0755
+      contents:
+        source: "https://github.com/k3s-io/k3s/releases/download/v1.31.4%2Bk3s1/k3s"
+        verification:
+          hash: "sha256-74897e4af26ea383ce50f445752f40ca63a0aef0d90994fb74073c43063eeeb2"
+    - path: /etc/rancher/k3s/config.yaml
+      mode: 0644
+      contents:
+        inline: |
+          ---
+          disable:
+          - servicelb
+          - traefik
+          - metrics-server
+          - local-storage
+          - helm-controller
+    - path: /etc/rancher/k3s/kubelet.config
+      mode: 0644
+      contents:
+        inline: |
+          apiVersion: kubelet.config.k8s.io/v1beta1
+          kind: KubeletConfiguration
+          shutdownGracePeriod: 60s
+          shutdownGracePeriodCriticalPods: 10s
+systemd:
+  units:
+    - name: custom-ucore-unsigned-autorebase.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Custom ucore autorebase to unsigned OCI and reboot
+        ConditionPathExists=!/etc/custom-ucore-autorebase/unverified
+        ConditionPathExists=!/etc/custom-ucore-autorebase/signed
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=oneshot
+        StandardOutput=journal+console
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/clusterfault/custom-ucore:latest
+        ExecStart=/usr/bin/touch /etc/custom-ucore-autorebase/unverified
+        ExecStart=/usr/bin/systemctl disable custom-ucore-unsigned-autorebase.service
+        ExecStart=/usr/bin/systemctl reboot
+        [Install]
+        WantedBy=multi-user.target
+    - name: custom-ucore-signed-autorebase.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Custom ucore autorebase to signed OCI and reboot
+        ConditionPathExists=/etc/custom-ucore-autorebase/unverified
+        ConditionPathExists=!/etc/custom-ucore-autorebase/signed
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=oneshot
+        StandardOutput=journal+console
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/ghcr.io/clusterfault/custom-ucore:latest
+        ExecStart=/usr/bin/touch /etc/custom-ucore-autorebase/signed
+        ExecStart=/usr/bin/systemctl disable custom-ucore-signed-autorebase.service
+        ExecStart=/usr/bin/systemctl reboot
+        [Install]
+        WantedBy=multi-user.target
+    - name: install-k3s-dependencies.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Install k3s dependencies
+        Wants=network-online.target
+        After=network-online.target
+        Before=zincati.service
+        ConditionPathExists=/etc/custom-ucore-autorebase/unverified
+        ConditionPathExists=/etc/custom-ucore-autorebase/signed
+        ConditionPathExists=|!/usr/bin/kubectl
+        ConditionPathExists=|!/usr/share/selinux/packages/k3s.pp
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/bin/rpm-ostree install --allow-inactive --assumeyes kubectl k3s-selinux
+        ExecStart=/usr/bin/systemctl disable install-k3s-dependencies.service
+        ExecStart=/usr/bin/systemctl reboot
+
+        [Install]
+        WantedBy=multi-user.target
+    - name: k3s.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Run K3s
+        Wants=network-online.target
+        After=network-online.target
+
+        [Service]
+        Type=notify
+        EnvironmentFile=-/etc/default/%N
+        EnvironmentFile=-/etc/sysconfig/%N
+        EnvironmentFile=-/etc/systemd/system/%N.env
+        KillMode=process
+        Delegate=yes
+        LimitNOFILE=1048576
+        LimitNPROC=infinity
+        LimitCORE=infinity
+        TasksMax=infinity
+        TimeoutStartSec=0
+        Restart=always
+        RestartSec=5s
+        ExecStartPre=-/sbin/modprobe br_netfilter
+        ExecStartPre=-/sbin/modprobe overlay
+        ExecStart=/usr/local/bin/k3s server  --write-kubeconfig-mode "0644"  --kubelet-arg="config=/etc/rancher/k3s/kubelet.config"
+
+        [Install]
+        WantedBy=multi-user.target
+    - name: copy-kubeconfig.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Copy kubeconfig
+        Before=zincati.service
+        ConditionPathExists=/etc/rancher/k3s/k3s.yaml
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStartPre=/usr/bin/mkdir -p /home/core/.kube
+        ExecStart=/usr/bin/cp /etc/rancher/k3s/k3s.yaml /home/core/.kube/config
+        ExecStart=/usr/bin/systemctl disable copy-kubeconfig.service
+
+        [Install]
+        WantedBy=multi-user.target
+ 
