@@ -1,0 +1,51 @@
+variant: fcos
+version: 1.4.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPq+6J0Ssd7bfPcwva85fTheS3I4l3kLP4r04J5ZkEic hsingh@confluent.io
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJPm8FHX5EtFK5BUZzlzdhI5A9nWHLVfCEY66djOJS5E harpreet@precision
+      password_hash: $y$j9T$2tAyrsoOrXrzVouTo6cJ5.$9oTIcJYHlNer9YmSlzVa/VNr6prkF9j6AA5g4KUpQj0
+storage:
+  directories:
+    - path: /etc/custom-ucore-autorebase
+      mode: 0754
+systemd:
+  units:
+    - name: custom-ucore-unsigned-autorebase.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Custom ucore autorebase to unsigned OCI and reboot
+        ConditionPathExists=!/etc/custom-ucore-autorebase/unverified
+        ConditionPathExists=!/etc/custom-ucore-autorebase/signed
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=oneshot
+        StandardOutput=journal+console
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/clusterfault/custom-ucore:latest
+        ExecStart=/usr/bin/touch /etc/custom-ucore-autorebase/unverified
+        ExecStart=/usr/bin/systemctl disable custom-ucore-unsigned-autorebase.service
+        ExecStart=/usr/bin/systemctl reboot
+        [Install]
+        WantedBy=multi-user.target
+    - name: custom-ucore-signed-autorebase.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Custom ucore autorebase to signed OCI and reboot
+        ConditionPathExists=/etc/custom-ucore-autorebase/unverified
+        ConditionPathExists=!/etc/custom-ucore-autorebase/verified
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=oneshot
+        StandardOutput=journal+console
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/ghcr.io/clusterfault/custom-ucore:latest
+        ExecStart=/usr/bin/touch /etc/custom-ucore-autorebase/signed
+        ExecStart=/usr/bin/systemctl disable custom-ucore-signed-autorebase.service
+        ExecStart=/usr/bin/systemctl reboot
+        [Install]
+        WantedBy=multi-user.target
