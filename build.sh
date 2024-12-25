@@ -18,13 +18,30 @@ RELEASE="$(rpm -E %fedora)"
 # this would install a package from rpmfusion
 # rpm-ostree install vlc
 
+# batch up all the rpm-ostree installs
+
+# get package names from all rpm-ostree-install files
+rpm_ostree_packages=$(cat $(find /tmp/packages -name rpm-ostree-install))
+
+# remove duplicates
+rpm_ostree_packages=$(echo "$rpm_ostree_packages" | sort | uniq)
+
+rpm-ostree install $rpm_ostree_packages
+
+# with all rpm-ostree packages installed 
+# go through each package and execute custom install and post install scripts
+# one at a time
 packages=$(find /tmp/packages -maxdepth 1 ! -path /tmp/packages  -type d -exec basename {} \;)
 
 # install packages
 for package in $packages; do
     # Script to install the package
-    /tmp/packages/${package}/install.sh
+    if [ -f /tmp/packages/${package}/install.sh ]; then
+        /tmp/packages/${package}/install.sh
+    fi
 
     # Script to run post-install tasks
-    /tmp/packages/${package}/post-install.sh
+    if [ -f /tmp/packages/${package}/post-install.sh ]; then
+        /tmp/packages/${package}/post-install.sh
+    fi
 done
