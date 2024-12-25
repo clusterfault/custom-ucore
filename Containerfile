@@ -17,7 +17,6 @@ FROM ghcr.io/ublue-os/${SOURCE_IMAGE}${SOURCE_SUFFIX}:${SOURCE_TAG}
 
 COPY build.sh /tmp/build.sh
 COPY packages /tmp/packages
-COPY apps /tmp/apps
 
 RUN mkdir -p /var/lib/alternatives && \
     /tmp/build.sh && \
