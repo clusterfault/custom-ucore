@@ -23,10 +23,12 @@ RELEASE="$(rpm -E %fedora)"
 # get package names from all rpm-ostree-install files
 rpm_ostree_packages=$(cat $(find /tmp/packages -name rpm-ostree-install))
 
-# remove duplicates
-rpm_ostree_packages=$(echo "$rpm_ostree_packages" | sort | uniq)
+# remove duplicates and unnecessary spaces
+rpm_ostree_packages=$(echo "$rpm_ostree_packages" | sort | uniq | xargs)
 
-rpm-ostree install $rpm_ostree_packages
+if [ -n "$rpm_ostree_packages" ]; then
+    rpm-ostree install $rpm_ostree_packages
+fi
 
 # with all rpm-ostree packages installed 
 # go through each package and execute custom install and post install scripts
