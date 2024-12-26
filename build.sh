@@ -40,13 +40,20 @@ packages=$(find $PACKAGES_DIR -maxdepth 1 ! -path $PACKAGES_DIR  -type d -exec b
 # install packages
 for package in $packages; do
     export package
-    # Script to install the package
-    if [ -f ${PACKAGES_DIR}/${package}/install.sh ]; then
-        ${PACKAGES_DIR}/${package}/install.sh
-    fi
 
-    # Script to run post-install tasks
-    if [ -f ${PACKAGES_DIR}/${package}/post-install.sh ]; then
-        ${PACKAGES_DIR}/${package}/post-install.sh
-    fi
+    PKG_PATH="${PACKAGES_DIR}/${package}"
+    # run executable files in package directory in alphabetical order
+    script_files=$(ls -1 "${PKG_PATH}")
+
+    for file in $script_files; do
+        #skip directories
+        [ -d "${PKG_PATH}/${file}" ] && continue
+
+        if [ -x "${PKG_PATH}/${file}" ]; then
+            echo "Executing ${PKG_PATH}/${file}"
+            "${PKG_PATH}/${file}"
+        else
+            echo "Skipping ${PKG_PATH}/${file}"
+        fi
+    done
 done
