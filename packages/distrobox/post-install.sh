@@ -2,4 +2,4 @@
 
 set -eoux pipefail
 
-cp /tmp/packages/distrobox/systemd/* /usr/lib/systemd/user/
+cp ${PACKAGES_DIR}/${package}/systemd/* /usr/lib/systemd/user/

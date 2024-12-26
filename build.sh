@@ -4,6 +4,8 @@ set -ouex pipefail
 
 RELEASE="$(rpm -E %fedora)"
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+export PACKAGES_DIR="${SCRIPT_DIR}/packages"
 
 ### Install packages
 
@@ -21,7 +23,7 @@ RELEASE="$(rpm -E %fedora)"
 # batch up all the rpm-ostree installs
 
 # get package names from all rpm-ostree-install files
-rpm_ostree_packages=$(cat $(find /tmp/packages -name rpm-ostree-install))
+rpm_ostree_packages=$(cat $(find $PACKAGES_DIR -name rpm-ostree-install))
 
 # remove duplicates and unnecessary spaces
 rpm_ostree_packages=$(echo "$rpm_ostree_packages" | sort | uniq | xargs)
@@ -33,17 +35,18 @@ fi
 # with all rpm-ostree packages installed 
 # go through each package and execute custom install and post install scripts
 # one at a time
-packages=$(find /tmp/packages -maxdepth 1 ! -path /tmp/packages  -type d -exec basename {} \;)
+packages=$(find $PACKAGES_DIR -maxdepth 1 ! -path $PACKAGES_DIR  -type d -exec basename {} \;)
 
 # install packages
 for package in $packages; do
+    export package
     # Script to install the package
-    if [ -f /tmp/packages/${package}/install.sh ]; then
-        /tmp/packages/${package}/install.sh
+    if [ -f ${PACKAGES_DIR}/${package}/install.sh ]; then
+        ${PACKAGES_DIR}/${package}/install.sh
     fi
 
     # Script to run post-install tasks
-    if [ -f /tmp/packages/${package}/post-install.sh ]; then
-        /tmp/packages/${package}/post-install.sh
+    if [ -f ${PACKAGES_DIR}/${package}/post-install.sh ]; then
+        ${PACKAGES_DIR}/${package}/post-install.sh
     fi
 done

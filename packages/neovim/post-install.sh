@@ -2,5 +2,5 @@
 
 set -eoux pipefail
 
-cp /tmp/packages/neovim/shell/zz-nvim-default-editor.sh /etc/profile.d/
-cp /tmp/packages/neovim/shell/alias-vim-to-nvim.sh /etc/profile.d/
+cp ${PACKAGES_DIR}/${package}/shell/zz-nvim-default-editor.sh /etc/profile.d/
+cp ${PACKAGES_DIR}/${package}/shell/alias-vim-to-nvim.sh /etc/profile.d/
