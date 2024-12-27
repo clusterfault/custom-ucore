@@ -2,7 +2,6 @@
 
 set -eoux pipefail
 
-cp ${PACKAGES_DIR}/${package}/systemd/units/* /usr/lib/systemd/system/
 systemctl enable brew-setup.service
 systemctl enable brew-upgrade.timer
 systemctl enable brew-update.timer

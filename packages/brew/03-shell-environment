@@ -1,6 +1,0 @@
-#!/usr/bin/bash
-
-set -eoux pipefail
-
-cp ${PACKAGES_DIR}/${package}/systemd/tmpfiles/* /usr/lib/tmpfiles.d/
-cp ${PACKAGES_DIR}/${package}/shell/brew* /etc/profile.d/

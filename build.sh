@@ -5,55 +5,56 @@ set -ouex pipefail
 RELEASE="$(rpm -E %fedora)"
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-export PACKAGES_DIR="${SCRIPT_DIR}/packages"
+PACKAGES_DIR="${SCRIPT_DIR}/packages"
 
-### Install packages
 
-# Packages can be installed from any enabled yum repo on the image.
-# RPMfusion repos are available by default in ublue main images
-# List of rpmfusion packages can be found here:
-# https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/39/x86_64/repoview/index.html&protocol=https&redirect=1
+# 1. Install all the required dnf repo packages using rpm-ostree 
+#
+#
 
-# this installs a package from fedora repos
-# rpm-ostree install screen
+## batch up all the rpm-ostree installs
+### get package names from all rpm-ostree-pkgs files
+rpm_ostree_packages=$(cat $(find $PACKAGES_DIR -name rpm-ostree-pkgs))
 
-# this would install a package from rpmfusion
-# rpm-ostree install vlc
-
-# batch up all the rpm-ostree installs
-
-# get package names from all rpm-ostree-install files
-rpm_ostree_packages=$(cat $(find $PACKAGES_DIR -name rpm-ostree-install))
-
-# remove duplicates and unnecessary spaces
+### remove duplicates and unnecessary spaces
 rpm_ostree_packages=$(echo "$rpm_ostree_packages" | sort | uniq | xargs)
 
+### run rpm-ostree install on the package list
 if [ -n "$rpm_ostree_packages" ]; then
     rpm-ostree install $rpm_ostree_packages
 fi
 
-# with all rpm-ostree packages installed 
-# go through each package and execute custom install and post install scripts
-# one at a time
+# 2. For each package copy files to image and run scripts 
+#
+#
+
+## get list of all packages
 packages=$(find $PACKAGES_DIR -maxdepth 1 ! -path $PACKAGES_DIR  -type d -exec basename {} \;)
 
-# install packages
 for package in $packages; do
-    export package
 
-    PKG_PATH="${PACKAGES_DIR}/${package}"
+## 2a. Copy files to approriate location inside the image, for each package 
+    
+    rsync -rvK "${PACKAGES_DIR}/${package}/files/" /
+
+## 2b. Run install scripts, for each package 
+#
+    PKG_SCRIPTS_PATH="${PACKAGES_DIR}/${package}/install-scripts"
+
+    # skip if install-scripts dir does not exist
+    [ -d "${PKG_SCRIPTS_PATH}" ] || continue 
     # run executable files in package directory in alphabetical order
-    script_files=$(ls -1 "${PKG_PATH}")
+    script_files=$(ls -1 "${PKG_SCRIPTS_PATH}")
 
     for file in $script_files; do
         #skip directories
-        [ -d "${PKG_PATH}/${file}" ] && continue
+        [ -d "${PKG_SCRIPTS_PATH}/${file}" ] && continue
 
-        if [ -x "${PKG_PATH}/${file}" ]; then
-            echo "Executing ${PKG_PATH}/${file}"
-            "${PKG_PATH}/${file}"
+        if [ -x "${PKG_SCRIPTS_PATH}/${file}" ]; then
+            echo "Executing ${PKG_SCRIPTS_PATH}/${file}"
+            "${PKG_SCRIPTS_PATH}/${file}"
         else
-            echo "Skipping ${PKG_PATH}/${file}"
+            echo "Skipping ${PKG_SCRIPTS_PATH}/${file}"
         fi
     done
 done
