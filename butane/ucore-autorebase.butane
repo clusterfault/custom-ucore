@@ -4,7 +4,7 @@ passwd:
   users:
     - name: core
       ssh_authorized_keys:
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPq+6J0Ssd7bfPcwva85fTheS3I4l3kLP4r04J5ZkEic hsingh@confluent.io
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPq+6J0Ssd7bfPcwva85fTheS3I4l3kLP4r04J5ZkEic hsingh@mbp16
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJPm8FHX5EtFK5BUZzlzdhI5A9nWHLVfCEY66djOJS5E harpreet@precision
       password_hash: $y$j9T$2tAyrsoOrXrzVouTo6cJ5.$9oTIcJYHlNer9YmSlzVa/VNr6prkF9j6AA5g4KUpQj0
 storage:
@@ -17,7 +17,7 @@ systemd:
       enabled: true
       contents: |
         [Unit]
-        Description=uCore autorebase to unsigned OCI and reboot
+        Description=Custom ucore autorebase to unsigned OCI and reboot
         ConditionPathExists=!/etc/ucore-autorebase/unverified
         ConditionPathExists=!/etc/ucore-autorebase/signed
         After=network-online.target
@@ -25,7 +25,7 @@ systemd:
         [Service]
         Type=oneshot
         StandardOutput=journal+console
-        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/clusterfault/ucore:latest
         ExecStart=/usr/bin/touch /etc/ucore-autorebase/unverified
         ExecStart=/usr/bin/systemctl disable ucore-unsigned-autorebase.service
         ExecStart=/usr/bin/systemctl reboot
@@ -35,15 +35,15 @@ systemd:
       enabled: true
       contents: |
         [Unit]
-        Description=uCore autorebase to signed OCI and reboot
+        Description=Custom ucore autorebase to signed OCI and reboot
         ConditionPathExists=/etc/ucore-autorebase/unverified
-        ConditionPathExists=!/etc/ucore-autorebase/verified
+        ConditionPathExists=!/etc/ucore-autorebase/signed
         After=network-online.target
         Wants=network-online.target
         [Service]
         Type=oneshot
         StandardOutput=journal+console
-        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/ublue-os/ucore:stable
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/ghcr.io/clusterfault/ucore:latest
         ExecStart=/usr/bin/touch /etc/ucore-autorebase/signed
         ExecStart=/usr/bin/systemctl disable ucore-signed-autorebase.service
         ExecStart=/usr/bin/systemctl reboot
