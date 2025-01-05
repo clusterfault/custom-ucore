@@ -35,7 +35,7 @@ for package in $packages; do
 
 ## 2a. Copy files to approriate location inside the image, for each package 
     
-    rsync -rvK "${PACKAGES_DIR}/${package}/files/" /
+    [ -d "${PACKAGES_DIR}/${package}/files" ] && rsync -rvK "${PACKAGES_DIR}/${package}/files/" /
 
 ## 2b. Run install scripts, for each package 
 #
