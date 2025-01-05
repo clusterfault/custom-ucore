@@ -1,0 +1,45 @@
+---
+name: generate-ignition-files
+on:
+  push:
+    paths:
+      - 'butane/**'
+  workflow_dispatch:
+
+env:
+  MY_IMAGE_NAME: "${{ github.ref_name == 'main' && github.event.repository.name  || format('{0}-{1}', github.event.repository.name,  github.ref_name) }}"
+  MY_IMAGE_DESC: "My Customized Universal Blue Image"
+  IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"  # do not edit
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.brand_name}}-${{ inputs.stream_name }}
+  cancel-in-progress: true
+
+jobs:
+  gen_push_ign:
+    name: Generate and push ignition files
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Build and push ignition files
+        shell: bash
+        run: |
+          rm -rf ignition
+          mkdir -p ignition
+          for file in "butane"/*; do
+              filename=$(basename $file .butane)
+              echo "Generating ignition for $file"
+              docker run -i --rm quay.io/coreos/butane:release --pretty --strict < butane/$filename.butane > ignition/$filename.ign
+              docker run -i --rm quay.io/coreos/ignition-validate:release - < ignition/$filename.ign
+          done
+          git config --global user.name 'Harpreet Singh'
+          git config --global user.email 'harpreet.surdy@gmail.com'
+          git add ignition/*
+          git diff --staged --quiet || git commit -m "Updating ignition files"
+          git push

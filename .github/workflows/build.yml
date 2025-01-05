@@ -5,6 +5,8 @@ on:
     paths-ignore:
       - '**/README.md'
       - 'butane/**'
+      - 'ignition/**'
+      - '.github/workflows/generate_ignition.yml'
   workflow_dispatch:
 
 env:
