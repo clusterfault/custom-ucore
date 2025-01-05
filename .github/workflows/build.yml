@@ -1,11 +1,6 @@
 ---
 name: build-ublue-custom
 on:
-  pull_request:
-    branches:
-      - main
-  schedule:
-    - cron: '05 10 * * *'  # 10:05am UTC everyday
   push:
     branches:
       - main
@@ -39,6 +34,8 @@ jobs:
 
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@v7
+        with:
+          remove-large-packages: false
 
       - name: Generate tags
         id: generate-tags
