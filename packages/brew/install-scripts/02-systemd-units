@@ -1,0 +1,7 @@
+#!/usr/bin/bash
+
+set -eoux pipefail
+
+systemctl enable brew-setup.service
+systemctl enable brew-upgrade.timer
+systemctl enable brew-update.timer
