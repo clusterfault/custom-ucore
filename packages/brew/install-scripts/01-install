@@ -3,7 +3,7 @@
 set -xeou pipefail
 
 # Convince the installer we are in CI
-touch /.dockerenv
+touch /run/.containerenv
 
 # Make these so script will work
 mkdir -p /var/home
