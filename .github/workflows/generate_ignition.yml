@@ -33,10 +33,11 @@ jobs:
           rm -rf ignition
           mkdir -p ignition
           for file in "butane"/*; do
-              filename=$(basename $file .butane)
+              [ -f "${file}" ] || continue
+              filename=$(basename "${file}" .butane)
               echo "Generating ignition for $file"
-              docker run -i --rm quay.io/coreos/butane:release --pretty --strict < butane/$filename.butane > ignition/$filename.ign
-              docker run -i --rm quay.io/coreos/ignition-validate:release - < ignition/$filename.ign
+              docker run -i --rm quay.io/coreos/butane:release --pretty --strict < "butane/${filename}.butane" > "ignition/${filename}.ign"
+              docker run -i --rm quay.io/coreos/ignition-validate:release - < "ignition/${filename}.ign"
           done
           git config --global user.name 'Harpreet Singh'
           git config --global user.email 'harpreet.surdy@gmail.com'
