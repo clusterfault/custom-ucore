@@ -17,7 +17,7 @@ systemd:
       enabled: true
       contents: |
         [Unit]
-        Description=Custom ucore autorebase to unsigned OCI and reboot
+        Description=uCore autorebase to unsigned OCI and reboot
         ConditionPathExists=!/etc/ucore-autorebase/unverified
         ConditionPathExists=!/etc/ucore-autorebase/signed
         After=network-online.target
@@ -25,7 +25,7 @@ systemd:
         [Service]
         Type=oneshot
         StandardOutput=journal+console
-        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/clusterfault/ucore:latest
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable
         ExecStart=/usr/bin/touch /etc/ucore-autorebase/unverified
         ExecStart=/usr/bin/systemctl disable ucore-unsigned-autorebase.service
         ExecStart=/usr/bin/systemctl reboot
@@ -35,7 +35,7 @@ systemd:
       enabled: true
       contents: |
         [Unit]
-        Description=Custom ucore autorebase to signed OCI and reboot
+        Description=uCore autorebase to signed OCI and reboot
         ConditionPathExists=/etc/ucore-autorebase/unverified
         ConditionPathExists=!/etc/ucore-autorebase/signed
         After=network-online.target
@@ -43,7 +43,7 @@ systemd:
         [Service]
         Type=oneshot
         StandardOutput=journal+console
-        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/ghcr.io/clusterfault/ucore:latest
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/ublue-os/ucore:stable
         ExecStart=/usr/bin/touch /etc/ucore-autorebase/signed
         ExecStart=/usr/bin/systemctl disable ucore-signed-autorebase.service
         ExecStart=/usr/bin/systemctl reboot
