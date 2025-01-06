@@ -36,7 +36,7 @@ jobs:
               [ -f "${file}" ] || continue
               filename=$(basename "${file}" .bu)
               echo "Generating ignition for $file"
-              docker run -i --rm quay.io/coreos/butane:release --pretty --strict < "butane/${filename}.bu" > "ignition/${filename}.ign"
+              docker run -i --rm --volume "${PWD}":/pwd --workdir /pwd quay.io/coreos/butane:release --pretty --strict --files-dir . < "butane/${filename}.bu" > "ignition/${filename}.ign"
               docker run -i --rm quay.io/coreos/ignition-validate:release - < "ignition/${filename}.ign"
           done
           git config --global user.name 'Harpreet Singh'

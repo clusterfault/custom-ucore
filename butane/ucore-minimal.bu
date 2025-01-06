@@ -1,12 +1,9 @@
 variant: fcos
 version: 1.4.0
-passwd:
-  users:
-    - name: core
-      ssh_authorized_keys:
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPq+6J0Ssd7bfPcwva85fTheS3I4l3kLP4r04J5ZkEic hsingh@mbp16
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJPm8FHX5EtFK5BUZzlzdhI5A9nWHLVfCEY66djOJS5E harpreet@precision
-      password_hash: $y$j9T$2tAyrsoOrXrzVouTo6cJ5.$9oTIcJYHlNer9YmSlzVa/VNr6prkF9j6AA5g4KUpQj0
+ignition:
+  config:
+    merge:
+      - local: ignition/fcos.ign
 storage:
   directories:
     - path: /etc/ucore-minimal-autorebase
