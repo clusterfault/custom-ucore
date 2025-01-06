@@ -1,0 +1,51 @@
+variant: fcos
+version: 1.4.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPq+6J0Ssd7bfPcwva85fTheS3I4l3kLP4r04J5ZkEic hsingh@mbp16
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJPm8FHX5EtFK5BUZzlzdhI5A9nWHLVfCEY66djOJS5E harpreet@precision
+      password_hash: $y$j9T$2tAyrsoOrXrzVouTo6cJ5.$9oTIcJYHlNer9YmSlzVa/VNr6prkF9j6AA5g4KUpQj0
+storage:
+  directories:
+    - path: /etc/ucore-minimal-autorebase
+      mode: 0754
+systemd:
+  units:
+    - name: ucore-minimal-unsigned-autorebase.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=ucore-minimal autorebase to unsigned OCI and reboot
+        ConditionPathExists=!/etc/ucore-minimal-autorebase/unverified
+        ConditionPathExists=!/etc/ucore-minimal-autorebase/signed
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=oneshot
+        StandardOutput=journal+console
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/ublue-os/ucore-minimal:stable
+        ExecStart=/usr/bin/touch /etc/ucore-minimal-autorebase/unverified
+        ExecStart=/usr/bin/systemctl disable ucore-minimal-unsigned-autorebase.service
+        ExecStart=/usr/bin/systemctl reboot
+        [Install]
+        WantedBy=multi-user.target
+    - name: ucore-minimal-signed-autorebase.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=ucore-minimal autorebase to signed OCI and reboot
+        ConditionPathExists=/etc/ucore-minimal-autorebase/unverified
+        ConditionPathExists=!/etc/ucore-minimal-autorebase/signed
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=oneshot
+        StandardOutput=journal+console
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/ublue-os/ucore-minimal:stable
+        ExecStart=/usr/bin/touch /etc/ucore-minimal-autorebase/signed
+        ExecStart=/usr/bin/systemctl disable ucore-minimal-signed-autorebase.service
+        ExecStart=/usr/bin/systemctl reboot
+        [Install]
+        WantedBy=multi-user.target
