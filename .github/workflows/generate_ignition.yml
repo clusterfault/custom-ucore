@@ -41,6 +41,6 @@ jobs:
           done
           git config --global user.name 'Harpreet Singh'
           git config --global user.email 'harpreet.surdy@gmail.com'
-          git add ignition/*
+          git add -u ignition/
           git diff --staged --quiet || git commit -m "Updating ignition files"
           git push
