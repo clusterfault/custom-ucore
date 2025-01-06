@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+
+set -o errexit
+
+echo "Adding Kubernetes RPM repo"
+cat << EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/repodata/repomd.xml.key
+EOF
+
+echo "Adding k3s RPM repo"
+cat << EOF > /etc/yum.repos.d/rancher-k3s-common.repo
+[rancher-k3s-common-stable]
+name=Rancher K3s Common (stable)
+baseurl=https://rpm.rancher.io/k3s/stable/common/coreos/noarch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=0
+gpgkey=https://rpm.rancher.io/public.key
+EOF
+
+echo "Writing K3s server config"
+mkdir -p /etc/rancher/k3s/
+cat << EOF > /etc/rancher/k3s/config.yaml
+---
+disable:
+-  servicelb
+- traefik
+- metrics-server
+- local-storage
+- helm-controller
+EOF
+
+echo "Writing K3s kubelet config"
+cat << EOF > /etc/rancher/k3s/kubelet.config
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+shutdownGracePeriod: 60s
+shutdownGracePeriodCriticalPods: 10s
+EOF
+
+echo "Installing k3s dependencies"
+/usr/bin/rpm-ostree install --allow-inactive --assumeyes kubectl k3s-selinux
+
+echo "Downloading k3s"
+curl -Lo /usr/local/bin/k3s https://github.com/k3s-io/k3s/releases/download/v1.31.4%2Bk3s1/k3s
+chmod +x /usr/local/bin/k3s
+
+echo "Writing K3s systemd unit"
+cat << EOF > /etc/systemd/system/k3s.service
+[Unit]
+Description=Run K3s
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=notify
+EnvironmentFile=-/etc/default/%N
+EnvironmentFile=-/etc/sysconfig/%N
+EnvironmentFile=-/etc/systemd/system/%N.env
+KillMode=process
+Delegate=yes
+LimitNOFILE=1048576
+LimitNPROC=infinity
+LimitCORE=infinity
+TasksMax=infinity
+TimeoutStartSec=0
+Restart=always
+RestartSec=5s
+ExecStartPre=-/sbin/modprobe br_netfilter
+ExecStartPre=-/sbin/modprobe overlay
+ExecStart=/usr/local/bin/k3s server  --write-kubeconfig-mode "0644"  --kubelet-arg="config=/etc/rancher/k3s/kubelet.config"
+
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "Enabling k3s service"
+systemctl enable k3s --now
+
+echo "Copy kubeconfig to user home dir"
+/usr/bin/mkdir -p /home/core/.kube
+/usr/bin/cp /etc/rancher/k3s/k3s.yaml /home/core/.kube/config
+
+echo "Rebooting to apply package changes"
+systemctl reboot
